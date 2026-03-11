@@ -1,0 +1,164 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  nombre       String
+  email        String   @unique
+  password     String
+  rol          String   // "alumno" | "profesor"
+  matricula    String?
+  carrera      String?
+  departamento String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  formularios    Form[]
+  grupos         GroupMember[]
+  gruposCreados  Group[]
+  respuestas     Response[]
+  notificaciones Notification[]
+}
+
+model Group {
+  id          String  @id @default(cuid())
+  nombre      String
+  descripcion String?
+  materia     String
+  semestre    String
+  carrera     String?
+  codigo      String   @unique
+  profesorId  String
+  createdAt   DateTime @default(now())
+
+  profesor  User          @relation(fields: [profesorId], references: [id])
+  miembros  GroupMember[]
+  formularios FormGroup[]
+}
+
+model GroupMember {
+  userId   String
+  groupId  String
+  joinedAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id])
+  group Group @relation(fields: [groupId], references: [id])
+
+  @@id([userId, groupId])
+}
+
+model Form {
+  id                String    @id @default(cuid())
+  titulo            String
+  descripcion       String?
+  profesorId        String
+  tipo              String    @default("formulario") // "formulario" | "examen"
+  estado            String    @default("borrador") // "borrador" | "activo" | "cerrado"
+  fechaInicio       DateTime?
+  fechaCierre       DateTime?
+  tiempoLimite      Int? // minutes
+  intentosMax       Int       @default(1)
+  mostrarResultados Boolean   @default(true)
+  aleatorio         Boolean   @default(false)
+  password          String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  profesor   User       @relation(fields: [profesorId], references: [id])
+  preguntas  Question[]
+  grupos     FormGroup[]
+  respuestas Response[]
+}
+
+model FormGroup {
+  formId      String
+  groupId     String
+  fechaLimite DateTime?
+
+  form  Form  @relation(fields: [formId], references: [id], onDelete: Cascade)
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@id([formId, groupId])
+}
+
+model Question {
+  id                String   @id @default(cuid())
+  formId            String
+  orden             Int
+  tipo              String // "multiple" | "checkbox" | "corta" | "parrafo" | "escala" | "fecha" | "archivo" | "seccion"
+  texto             String
+  puntaje           Int      @default(0)
+  obligatoria       Boolean  @default(false)
+  retroalimentacion String?
+  mediaUrl          String?
+  createdAt         DateTime @default(now())
+
+  form                Form             @relation(fields: [formId], references: [id], onDelete: Cascade)
+  opciones            QuestionOption[]
+  respuestasCorrectas CorrectAnswer[]
+  respuestas          Answer[]
+}
+
+model QuestionOption {
+  id         String @id @default(cuid())
+  questionId String
+  texto      String
+  orden      Int
+
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+}
+
+model CorrectAnswer {
+  id         String @id @default(cuid())
+  questionId String
+  optionId   String
+
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+}
+
+model Response {
+  id              String   @id @default(cuid())
+  formId          String
+  userId          String
+  grupoId         String?
+  calificacion    Float?
+  calificacionMax Float?
+  completadoEn    DateTime @default(now())
+  tiempoUsado     Int?
+
+  form       Form     @relation(fields: [formId], references: [id])
+  user       User     @relation(fields: [userId], references: [id])
+  respuestas Answer[]
+}
+
+model Answer {
+  id         String   @id @default(cuid())
+  responseId String
+  questionId String
+  valor      String?
+  archivos   String[]
+
+  response Response @relation(fields: [responseId], references: [id], onDelete: Cascade)
+  question Question @relation(fields: [questionId], references: [id])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  tipo      String
+  mensaje   String
+  leida     Boolean  @default(false)
+  data      Json?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
