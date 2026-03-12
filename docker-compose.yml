@@ -31,7 +31,7 @@ services:
       NODE_ENV: production
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
     ports:
-      - "3001:3001"
+      - "127.0.0.1:3001:3001"
     depends_on:
       postgres:
         condition: service_healthy
@@ -42,7 +42,7 @@ services:
       dockerfile: Dockerfile.frontend
     restart: unless-stopped
     ports:
-      - "80:80"
+      - "127.0.0.1:8080:80"
     depends_on:
       - backend
 
